@@ -284,6 +284,10 @@ impl<T: 'static + Copy + PartialEq> WidgetImpl for DragDrop<T> {
             self.state = new_state;
             self.recalc_draw(ctx);
         }
+
+        if self.is_dragging() {
+            output.steal_focus(self.label.clone());
+        }
     }
 
     fn draw(&self, g: &mut GfxCtx) {
