@@ -29,6 +29,8 @@ impl DrawRoad {
     }
 
     pub fn render_center_line(&self, app: &dyn AppLike) -> GeomBatch {
+        let thickness = Distance::meters(0.25);
+        
         let r = app.map().get_r(self.id);
         let center_line_color = if r.is_private() {
             app.cs().road_center_line.lerp(app.cs().private_road, 0.5)
@@ -47,14 +49,16 @@ impl DrawRoad {
                 && pair[0].lane_type.is_for_moving_vehicles()
                 && pair[1].lane_type.is_for_moving_vehicles()
             {
-                let pl = r.get_left_side().must_shift_right(width);
+                let pl = r.get_left_side().must_shift_right(width - thickness * 1.0);
                 batch.extend(
                     center_line_color,
-                    pl.dashed_lines(
-                        Distance::meters(0.25),
-                        Distance::meters(2.0),
-                        Distance::meters(1.0),
-                    ),
+                    vec![pl.make_polygons(thickness)]
+                );
+                
+                let pl = r.get_left_side().must_shift_right(width + thickness * 1.0);
+                batch.extend(
+                    center_line_color,
+                    vec![pl.make_polygons(thickness)]
                 );
             }
         }
