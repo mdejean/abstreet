@@ -96,7 +96,7 @@ impl ControlStopSign {
         // Degenerate roads and deadends don't need any stop signs. But be careful with
         // roundabouts; we want it to be lower priority to enter a roundabout than continue through
         // it.
-        if ss.roads.len() <= 2
+        if map.get_i(id).roads.len() <= 2
             && ss
                 .roads
                 .keys()
@@ -115,7 +115,7 @@ impl ControlStopSign {
         // - Treat on/off ramps with less priority than the main part of the highway
         // - Lower the priority of service roads
         let mut rank: HashMap<RoadID, (osm::RoadRank, usize)> = HashMap::new();
-        for r in ss.roads.keys() {
+        for r in map.get_i(id).roads.iter() {
             let r = map.get_r(*r);
             // Lower number is lower priority
             let priority = if r.is_cycleway() || r.osm_tags.is(osm::HIGHWAY, "service") {
