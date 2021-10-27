@@ -245,9 +245,20 @@ fn calculate_sidewalk_lines(lane: &Lane) -> Vec<Polygon> {
 }
 
 fn calculate_parking_lines(lane: &Lane, map: &Map) -> Vec<Polygon> {
-    let leg_length = Distance::meters(1.0);
-
+    let thickness = Distance::meters(0.25);
+    
+    let lane_edge_pts = if /*lane.dir == Direction::Fwd*/ true {
+        lane.lane_center_pts.must_shift_left(lane.width / 2.0 - thickness)
+    } else {
+        lane.lane_center_pts.must_shift_right(lane.width / 2.0)
+    };
+    
     let mut result = Vec::new();
+    
+    result.push(lane_edge_pts.make_polygons(thickness));
+    
+    /*let leg_length = Distance::meters(1.0);
+
     let num_spots = lane.number_parking_spots(map.get_config());
     if num_spots > 0 {
         for idx in 0..=num_spots {
@@ -273,7 +284,7 @@ fn calculate_parking_lines(lane: &Lane, map: &Map) -> Vec<Polygon> {
             let p3 = t_pt.project_away(leg_length, lane_angle.opposite());
             result.push(Line::must_new(t_pt, p3).make_polygons(Distance::meters(0.25)));
         }
-    }
+    }*/
 
     result
 }
