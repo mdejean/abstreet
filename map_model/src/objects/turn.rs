@@ -96,7 +96,12 @@ impl Turn {
     // TODO What should this be for zero-length turns? Probably src's pt1 to dst's pt2 or
     // something.
     pub fn angle(&self) -> Angle {
-        self.geom.first_pt().angle_to(self.geom.last_pt())
+        if self.geom.points().len() < 3
+        {
+            return Angle::ZERO
+        }
+        //this is ridiculous, using segments of the turn geometry rather than the start and end angles
+        self.geom.last_line().angle().shortest_rotation_towards(self.geom.first_line().angle())
     }
 
     pub fn between_sidewalks(&self) -> bool {
