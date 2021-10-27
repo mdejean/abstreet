@@ -312,7 +312,7 @@ fn calculate_driving_lines(lane: &Lane, road: &Road) -> Vec<Polygon> {
     lane_edge_pts.dashed_lines(
         Distance::meters(0.25),
         Distance::meters(1.0),
-        Distance::meters(1.5),
+        Distance::meters(4.0),
     )
 }
 
