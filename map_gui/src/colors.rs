@@ -383,7 +383,7 @@ impl ColorScheme {
             match rank {
                 RoadRank::Highway => Color::grey(0.3),
                 RoadRank::Arterial => Color::grey(0.4),
-                RoadRank::Local => Color::grey(0.5),
+                RoadRank::Local => Color::grey(0.4),
             }
         } else {
             self.driving_lane
