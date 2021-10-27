@@ -15,9 +15,9 @@ use crate::{
 /// bit different than the length in parking lots, so set a different value here.
 pub const PARKING_LOT_SPOT_LENGTH: Distance = Distance::const_meters(6.4);
 
-pub const NORMAL_LANE_THICKNESS: Distance = Distance::const_meters(2.5);
+pub const NORMAL_LANE_THICKNESS: Distance = Distance::const_meters(3.0);
 const SERVICE_ROAD_LANE_THICKNESS: Distance = Distance::const_meters(1.5);
-pub const SIDEWALK_THICKNESS: Distance = Distance::const_meters(1.5);
+pub const SIDEWALK_THICKNESS: Distance = Distance::const_meters(3.1);
 const SHOULDER_THICKNESS: Distance = Distance::const_meters(0.5);
 
 /// A lane is identified by its parent road and its position, ordered from the left.
@@ -484,10 +484,10 @@ impl LaneSpec {
             // https://en.wikipedia.org/wiki/Lane#Lane_width
             LaneType::Driving => {
                 let mut choices = vec![
-                    (Distance::feet(8.0), "narrow"),
-                    (SERVICE_ROAD_LANE_THICKNESS, "alley"),
-                    (Distance::feet(10.0), "typical"),
                     (Distance::feet(12.0), "highway"),
+                    (Distance::feet(10.0), "typical"),
+                    (SERVICE_ROAD_LANE_THICKNESS, "alley"),
+                    (Distance::feet(8.0), "narrow"),
                 ];
                 if tags.is(osm::HIGHWAY, "service") || tags.is("narrow", "yes") {
                     choices.swap(1, 0);
@@ -508,9 +508,9 @@ impl LaneSpec {
             // https://nacto.org/publication/urban-street-design-guide/street-design-elements/lane-width/
             LaneType::Parking => {
                 let mut choices = vec![
-                    (Distance::feet(7.0), "narrow"),
+                    (Distance::feet(11.0), "wide"),
                     (SERVICE_ROAD_LANE_THICKNESS, "alley"),
-                    (Distance::feet(9.0), "wide"),
+                    (Distance::feet(7.0), "narrow"),
                     (Distance::feet(15.0), "loading zone"),
                 ];
                 if tags.is(osm::HIGHWAY, "service") || tags.is("narrow", "yes") {
