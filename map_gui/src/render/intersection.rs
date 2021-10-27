@@ -57,9 +57,40 @@ impl DrawIntersection {
         }
 
         for turn in &i.turns {
+            let mut render = true;
+            if turn.turn_type != TurnType::Crosswalk
+            {
+                render = false;
+            }
+            // if going straight through at this intersection conflicts with 
+            // the crosswalk, only render crosswalk if that 'turn' must stop
+            if i.intersection_type == IntersectionType::StopSign
+            {
+                for turn2 in &i.turns 
+                {
+                    if turn2.turn_type == TurnType::Straight
+                        && turn2.conflicts_with(turn) 
+                    {
+                        for ss in map.get_stop_sign(i.id).roads.values() {
+                            if ss.lane_closest_to_edge == turn2.id.src
+                                || ss.lane_closest_to_edge == turn2.id.dst
+                            {
+                                if !ss.must_stop
+                                {
+                                    render = false;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
             // Avoid double-rendering
-            if turn.turn_type == TurnType::Crosswalk
-                && !turn.other_crosswalk_ids.iter().any(|id| *id < turn.id)
+            if turn.other_crosswalk_ids.iter().any(|id| *id < turn.id)
+            {
+                render = false;
+            }
+                                    
+            if render
             {
                 make_crosswalk(&mut default_geom, turn, map, app.cs());
             }
