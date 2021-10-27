@@ -168,8 +168,8 @@ fn make_vehicle_turns(i: &Intersection, map: &Map) -> Vec<Turn> {
                 continue;
             }
 
-            let from_angle = src.last_line().angle().opposite();
-            let to_angle = dst.first_line().angle().opposite();
+            let from_angle = src.last_line().angle();
+            let to_angle = dst.first_line().angle();
             let mut turn_type = turn_type_from_angles(from_angle, to_angle);
             if turn_type == TurnType::UTurn {
                 // Lots of false positives when classifying these just based on angles. So also
@@ -205,12 +205,8 @@ fn make_vehicle_turns(i: &Intersection, map: &Map) -> Vec<Turn> {
                 }
             }
 
-            let geom = if turn_type == TurnType::Straight {
-                PolyLine::must_new(vec![src.last_pt(), dst.first_pt()])
-            } else {
-                curvey_turn(src, dst)
-                    .unwrap_or_else(|_| PolyLine::must_new(vec![src.last_pt(), dst.first_pt()]))
-            };
+            let geom = curvey_turn(src, dst)
+                    .unwrap_or_else(|_| PolyLine::must_new(vec![src.last_pt(), dst.first_pt()]));
 
             turns.push(Turn {
                 id: TurnID {
@@ -234,19 +230,31 @@ fn curvey_turn(src: &Lane, dst: &Lane) -> Result<PolyLine> {
     let src_line = src.last_line();
     let dst_line = dst.first_line().reversed();
 
-    // TODO Tune the 5.0 and pieces
     let pt1 = src.last_pt();
-    let control_pt1 = src_line.unbounded_dist_along(src_line.length() + Distance::meters(5.0));
-    let control_pt2 = dst_line.unbounded_dist_along(dst_line.length() + Distance::meters(5.0));
     let pt2 = dst.first_pt();
 
-    // If the intersection is too small, the endpoints and control points squish together, and
-    // they'll overlap. In that case, just use the straight line for the turn.
-    if let (Some(l1), Some(l2)) = (Line::new(pt1, control_pt1), Line::new(control_pt2, pt2)) {
-        if l1.crosses(&l2) {
-            bail!("intersection is too small for a Bezier curve");
-        }
-    }
+    let intersection = src_line.infinite().intersection(&dst_line.infinite()).unwrap_or(pt1);
+
+    let (control_pt1, control_pt2) = if src_line.angle().approx_parallel(dst_line.angle(), 5.0)
+        // zero length intersections (this results in PolyLine::new returning none)
+        || pt1.approx_eq(intersection, geom::EPSILON_DIST)
+        || pt2.approx_eq(intersection, geom::EPSILON_DIST)
+        // weirdly shaped intersections where the lane lines intersect outside the intersection
+        || src_line.contains_pt(intersection)
+        || dst_line.contains_pt(intersection)
+    {
+        // make u turns have their control points in a rectangle, and straight turns have 
+        // their control points near the middle of the intersection
+        (
+            src_line.unbounded_dist_along(src_line.length() + pt1.dist_to(pt2) / 2.0),
+            dst_line.unbounded_dist_along(dst_line.length() + pt1.dist_to(pt2) / 2.0)
+        )
+    } else {
+        (
+            Line::must_new(pt1, intersection).unbounded_percent_along(2.0 / 3.0),
+            Line::must_new(pt2, intersection).unbounded_percent_along(2.0 / 3.0)
+        )
+    };
 
     let curve = Bez3o::new(
         to_pt(pt1),
