@@ -9,7 +9,7 @@ aabb-quadtree = "0.1.0"
 abstutil = { path = "../abstutil" }
 anyhow = "1.0.38"
 earcutr = "0.1.1"
-geo = "0.18"
+geo = { git = "https://github.com/georust/geo", branch = "master" }
 geo-booleanop = "0.3.2"
 geojson = { version = "0.22.0", features = ["geo-types"] }
 histogram = "0.6.9"
