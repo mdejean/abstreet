@@ -497,8 +497,8 @@ pub fn make_crosswalk(batch: &mut GeomBatch, turn: &Turn, map: &Map, cs: &ColorS
     let width = SIDEWALK_THICKNESS;
     // Start at least width out to not hit sidewalk corners. Also account for the thickness of the
     // crosswalk line itself. Center the lines inside these two boundaries.
-    let boundary = width;
-    let tile_every = width * 0.6;
+    let boundary = width - CROSSWALK_LINE_THICKNESS * 3.0 + Distance::meters(0.33);
+    let tile_every = CROSSWALK_LINE_THICKNESS * 3.0;
     let line = {
         // The middle line in the crosswalk geometry is the main crossing line.
         let pts = turn.geom.points();
@@ -531,16 +531,6 @@ pub fn make_crosswalk(batch: &mut GeomBatch, turn: &Turn, map: &Map, cs: &ColorS
             batch.push(
                 cs.general_road_marking,
                 perp_line(Line::must_new(pt1, pt2), width).make_polygons(CROSSWALK_LINE_THICKNESS),
-            );
-
-            // Actually every line is a double
-            let pt3 = line
-                .dist_along(dist_along + 2.0 * CROSSWALK_LINE_THICKNESS)
-                .expect(&err);
-            let pt4 = pt3.project_away(Distance::meters(1.0), line.angle());
-            batch.push(
-                cs.general_road_marking,
-                perp_line(Line::must_new(pt3, pt4), width).make_polygons(CROSSWALK_LINE_THICKNESS),
             );
 
             dist_along += tile_every;
