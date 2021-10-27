@@ -236,17 +236,29 @@ fn curvey_turn(src: &Lane, dst: &Lane) -> Result<PolyLine> {
 
     // TODO Tune the 5.0 and pieces
     let pt1 = src.last_pt();
-    let control_pt1 = src_line.unbounded_dist_along(src_line.length() + Distance::meters(5.0));
-    let control_pt2 = dst_line.unbounded_dist_along(dst_line.length() + Distance::meters(5.0));
+    
+    let (control_pt1, control_pt2) = if src_line.angle().approx_parallel(dst_line.angle(), 5.0)
+    {
+        (
+            src_line.unbounded_dist_along(src_line.length() + Distance::meters(5.0)),
+            dst_line.unbounded_dist_along(dst_line.length() + Distance::meters(5.0))
+        )
+    } else {
+        (
+            src_line.infinite().intersection(&dst_line.infinite()).unwrap_or(pt1),
+            src_line.infinite().intersection(&dst_line.infinite()).unwrap_or(pt1)
+        )
+    };
+    
     let pt2 = dst.first_pt();
 
     // If the intersection is too small, the endpoints and control points squish together, and
     // they'll overlap. In that case, just use the straight line for the turn.
-    if let (Some(l1), Some(l2)) = (Line::new(pt1, control_pt1), Line::new(control_pt2, pt2)) {
-        if l1.crosses(&l2) {
-            bail!("intersection is too small for a Bezier curve");
-        }
-    }
+//     if let (Some(l1), Some(l2)) = (Line::new(pt1, control_pt1), Line::new(control_pt2, pt2)) {
+//         if l1.crosses(&l2) {
+//             bail!("intersection is too small for a Bezier curve");
+//         }
+//     }
 
     let curve = Bez3o::new(
         to_pt(pt1),
@@ -254,7 +266,7 @@ fn curvey_turn(src: &Lane, dst: &Lane) -> Result<PolyLine> {
         to_pt(control_pt2),
         to_pt(pt2),
     );
-    let pieces = 5;
+    let pieces = 7;
     let mut curve: Vec<Pt2D> = (0..=pieces)
         .map(|i| {
             from_pt(
