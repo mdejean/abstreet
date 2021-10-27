@@ -1,6 +1,7 @@
 use std::cell::RefCell;
 use std::collections::HashMap;
 
+use nbez::{Bez3o, BezCurve, Point2d};
 use geom::{Angle, ArrowCap, Circle, Distance, Line, PolyLine, Polygon, Pt2D};
 use map_model::{
     BufferType, Direction, DrivingSide, Lane, LaneID, LaneType, Map, Road, RoadID, TurnID,
@@ -339,34 +340,74 @@ fn calculate_turn_markings(map: &Map, lane: &Lane) -> Vec<Polygon> {
         return Vec::new();
     }
 
-    // Don't call out the strange lane-changing in intersections. Per target road, find the average
+    // Don't call out the strange lane-changing in intersections. Per target road, find the minimum
     // turn angle.
-    let mut angles_per_road: HashMap<RoadID, Vec<Angle>> = HashMap::new();
+    let mut angles_per_road: HashMap<RoadID, Angle> = HashMap::new();
     for turn in map.get_turns_from_lane(lane.id) {
-        angles_per_road
-            .entry(turn.id.dst.road)
-            .or_insert_with(Vec::new)
-            .push(turn.angle());
+        let a = angles_per_road.entry(turn.id.dst.road)
+            .or_insert(turn.angle());
+        let b = turn.angle();
+        if (b.simple_shortest_rotation_towards(Angle::ZERO)).abs() 
+            < (a.simple_shortest_rotation_towards(Angle::ZERO)).abs()
+        {
+            *a = b;
+        }
     }
 
     let mut results = Vec::new();
-    let thickness = Distance::meters(0.2);
+    let thickness = Distance::meters(0.3);
 
     let common_base = lane.lane_center_pts.exact_slice(
-        lane.length() - Distance::meters(7.0),
-        lane.length() - Distance::meters(5.0),
+        lane.length() - Distance::meters(6.0),
+        lane.length() - Distance::meters(5.5),
     );
     results.push(common_base.make_polygons(thickness));
 
-    for (_, angles) in angles_per_road.into_iter() {
-        let avg = Angle::average(angles);
-        results.push(
-            PolyLine::must_new(vec![
-                common_base.last_pt(),
-                common_base.last_pt().project_away(lane.width / 2.0, avg),
-            ])
-            .make_arrow(thickness, ArrowCap::Triangle),
+    for (_, turn_angle) in angles_per_road.into_iter() {
+        let start_angle = lane.lane_center_pts.last_line().angle();
+        let a2 = start_angle
+            + Angle::degrees(turn_angle.simple_shortest_rotation_towards(Angle::ZERO) / 2.0);
+        let start_pt = common_base.last_pt();
+        // squish turns in a bit
+        let end_pt = start_pt.project_away(Distance::meters(
+                3.0 - (
+                    (turn_angle.normalized_radians() - std::f64::consts::PI)
+                    / 2.0 
+                ).cos() * 1.5)
+                , a2);
+        // ends of the curve tangent to the roads
+        let cp1 = start_pt.project_away(Distance::meters(1.33), start_angle);
+        let cp2 = end_pt.project_away(Distance::meters(1.33), (start_angle + turn_angle).opposite());
+        let curve = Bez3o::new(
+            to_pt(start_pt),
+            to_pt(cp1),
+            to_pt(cp2),
+            to_pt(end_pt)
         );
+        let pieces = 5;
+        let mut curve_pts: Vec<Pt2D> = (0..=pieces)
+            .map(|i| {
+                from_pt(
+                    curve
+                        .interp(1.0 / f64::from(pieces) * f64::from(i))
+                        .unwrap(),
+                )
+            })
+            .collect();
+        // add extra pieces to ensure end segments are tangent.
+        curve_pts.insert(1, from_pt(curve.interp(0.01 / f64::from(pieces)).unwrap()));
+        curve_pts.insert(curve_pts.len() - 1, from_pt(curve.interp(1.0 - 0.01 / f64::from(pieces)).unwrap()));
+        curve_pts.dedup();
+        
+        results.push(
+            PolyLine::new(curve_pts).unwrap()
+            .make_arrow(thickness, ArrowCap::Triangle)
+        );
+        
+//         results.push(
+//             PolyLine::new(vec![start_pt, cp1, cp2, end_pt]).unwrap()
+//             .make_polygons(Distance::meters(0.1))
+//         );
     }
 
     results
@@ -494,3 +535,12 @@ fn calculate_buffer_markings(
         }
     }
 }
+
+fn to_pt(pt: Pt2D) -> Point2d<f64> {
+    Point2d::new(pt.x(), pt.y())
+}
+
+fn from_pt(pt: Point2d<f64>) -> Pt2D {
+    Pt2D::new(pt.x, pt.y)
+}
+
