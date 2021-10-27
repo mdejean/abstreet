@@ -34,7 +34,7 @@ mod turn;
 
 pub const BIG_ARROW_THICKNESS: Distance = Distance::const_meters(0.5);
 
-pub const CROSSWALK_LINE_THICKNESS: Distance = Distance::const_meters(0.15);
+pub const CROSSWALK_LINE_THICKNESS: Distance = Distance::const_meters(0.33);
 
 pub const OUTLINE_THICKNESS: Distance = Distance::const_meters(0.5);
 
