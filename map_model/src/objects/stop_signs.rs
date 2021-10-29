@@ -57,7 +57,8 @@ impl ControlStopSign {
             roads: BTreeMap::new(),
         };
         // One-way outbound roads don't need a stop sign, so skip them entirely.
-        for r in map.get_i(id).get_sorted_incoming_roads(map) {
+        let i = map.get_i(id);
+        for r in i.get_sorted_incoming_roads(map) {
             let r = map.get_r(r);
             let want_dir = if r.dst_i == id {
                 Direction::Fwd
@@ -96,7 +97,7 @@ impl ControlStopSign {
         // Degenerate roads and deadends don't need any stop signs. But be careful with
         // roundabouts; we want it to be lower priority to enter a roundabout than continue through
         // it.
-        if map.get_i(id).roads.len() <= 2
+        if (i.is_degenerate() || i.is_deadend())
             && ss
                 .roads
                 .keys()
@@ -104,7 +105,7 @@ impl ControlStopSign {
         {
             return ss;
         }
-        if map.get_i(id).is_cycleway(map) {
+        if i.is_cycleway(map) {
             // Two cyclepaths intersecting can just yield.
             return ss;
         }
@@ -115,7 +116,7 @@ impl ControlStopSign {
         // - Treat on/off ramps with less priority than the main part of the highway
         // - Lower the priority of service roads
         let mut rank: HashMap<RoadID, (osm::RoadRank, usize)> = HashMap::new();
-        for r in map.get_i(id).roads.iter() {
+        for r in i.roads.iter() {
             let r = map.get_r(*r);
             // Lower number is lower priority
             let priority = if r.is_cycleway() || r.osm_tags.is(osm::HIGHWAY, "service") {

@@ -35,7 +35,7 @@ pub fn make_walking_turns(map: &Map, i: &Intersection) -> Vec<Turn> {
         1
     };
 
-    if roads.len() == 2 {
+    if i.is_degenerate() {
         if let Some(turns) = make_degenerate_crosswalks(map, i.id, roads[0], roads[1]) {
             result.extend(turns);
         }
