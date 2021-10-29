@@ -234,23 +234,23 @@ fn curvey_turn(src: &Lane, dst: &Lane) -> Result<PolyLine> {
     let src_line = src.last_line();
     let dst_line = dst.first_line().reverse();
 
-    // TODO Tune the 5.0 and pieces
     let pt1 = src.last_pt();
+    let pt2 = dst.first_pt();
     
     let (control_pt1, control_pt2) = if src_line.angle().approx_parallel(dst_line.angle(), 5.0)
     {
+        //give U-turns an arbitrary amount of curviness
         (
             src_line.unbounded_dist_along(src_line.length() + Distance::meters(5.0)),
             dst_line.unbounded_dist_along(dst_line.length() + Distance::meters(5.0))
         )
     } else {
         (
-            src_line.infinite().intersection(&dst_line.infinite()).unwrap_or(pt1),
-            src_line.infinite().intersection(&dst_line.infinite()).unwrap_or(pt1)
+            Line::must_new(pt1, src_line.infinite().intersection(&dst_line.infinite()).unwrap_or(pt2)).unbounded_percent_along(2.0 / 3.0),
+            Line::must_new(pt2, src_line.infinite().intersection(&dst_line.infinite()).unwrap_or(pt1)).unbounded_percent_along(2.0 / 3.0)
         )
     };
     
-    let pt2 = dst.first_pt();
 
     // If the intersection is too small, the endpoints and control points squish together, and
     // they'll overlap. In that case, just use the straight line for the turn.
