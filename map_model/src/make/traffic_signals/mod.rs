@@ -58,6 +58,7 @@ pub fn get_possible_policies(
 
     // As long as we're using silly heuristics for these by default, prefer shorter cycle
     // length.
+    results.push(("some-bad".to_string(), some_bad_assignment(i, map)));
     if let Some(ts) = four_way_two_stage(map, i) {
         results.push(("two-stage".to_string(), ts));
     }
@@ -116,6 +117,7 @@ fn greedy_assignment(i: &Intersection) -> ControlTrafficSignal {
     // Greedily partition movements into stages that only have protected movements.
     let mut remaining_movements: Vec<MovementID> = i.movements.keys().cloned().collect();
     let mut current_stage = Stage::new();
+
     loop {
         let add = remaining_movements
             .iter()
@@ -139,6 +141,117 @@ fn greedy_assignment(i: &Intersection) -> ControlTrafficSignal {
 
     expand_all_stages(&mut ts, i);
 
+    ts
+}
+
+fn some_bad_assignment(i: &Intersection, map: &Map) -> ControlTrafficSignal {
+    let mut ts = new(i.id);
+
+    // Greedily partition movements into stages that only have protected movements.
+    let mut remaining_movements: Vec<MovementID> = i.movements.keys().cloned().collect();
+    let mut current_stage = Stage::new();
+    
+    remaining_movements.sort_by(
+        |a, b| a.crosswalk.cmp(&b.crosswalk)  // not crosswalk -> crosswalk
+        .then(i.movements[a].turn_type.cmp(&i.movements[b].turn_type)) // straight -> right -> left -> uturn
+        .then(map.get_r(a.from.id).get_rank().max(map.get_r(a.to.id).get_rank()) //doesn't involve local -> involves local
+            .cmp(&map.get_r(b.from.id).get_rank().max(map.get_r(b.to.id).get_rank()))
+        )
+    );
+    
+    let roads = i.get_sorted_incoming_roads(map);
+    
+    loop {
+        let add = remaining_movements
+            .iter()
+            .position(|&g| current_stage.could_be_protected(g, i));
+        match add {
+            Some(idx) => {
+                current_stage
+                    .protected_movements
+                    .insert(remaining_movements.remove(idx));
+            }
+            None => {
+                assert!(!current_stage.protected_movements.is_empty());
+                ts.stages.push(current_stage);
+                current_stage = Stage::new();
+                if remaining_movements.is_empty() {
+                    break;
+                }
+            }
+        }
+        
+        // if each incoming road has a protected stage we're done, all other vehicle movements will be yields
+        if roads.iter().all(|r| ts.stages.iter().any(|s| s.protected_movements.iter().any(|m| m.from.id == *r)))
+        {
+            if !current_stage.protected_movements.is_empty()
+            {
+                    ts.stages.push(current_stage);
+                    current_stage = Stage::new();
+            }
+            break;
+        }
+    }
+    // then for each stage's protected movements add each other vehicular movement which comes from that road as a yield
+    for stage in &mut ts.stages
+    {
+        while let Some(idx) = remaining_movements.iter().position(|&m|
+                !m.crosswalk 
+                && stage.protected_movements.iter().any(|m2|
+                    m2.from.id == m.from.id
+                ))
+        {
+            stage
+                .yield_movements
+                .insert(remaining_movements.remove(idx));
+        }
+    }
+    
+    // all remaining movements are crosswalk movements
+            
+    for stage in &mut ts.stages
+    {
+        // if a stage has only one protected movement, we're not removing it
+        if stage.protected_movements.len() == 1 {
+            continue;
+        }
+        // then go through the movements in each stage in order from before
+        for m in stage.protected_movements.clone().iter()
+        {
+            // if there's a crosswalk which hasn't been added which does not conflict with this movement but conflicts with other movements in this stage,
+            if let Some(idx) = remaining_movements.iter().position(|&crosswalk| !i.movements[&m].conflicts_with(&i.movements[&crosswalk]) && !stage.could_be_protected(crosswalk, i))
+            {
+                // make the other conflicting movements yield movements
+                for p in stage.protected_movements.iter().filter(|&m2| i.movements[m2].conflicts_with(&i.movements[&remaining_movements[idx]])).copied()
+                {
+                    stage.yield_movements.insert(p);
+                }
+                stage.protected_movements.retain(|&m2| !i.movements[&m2].conflicts_with(&i.movements[&remaining_movements[idx]]));
+                
+//~                 while let Some(swap) = stage.protected_movements.iter().find(|&m2| i.movements[m2].conflicts_with(&i.movements[&remaining_movements[idx]]))
+//~                 {
+//~                     stage.yield_movements.insert(stage.protected_movements.take(swap).unwrap());
+//~                 }
+//~                 
+                // then add crosswalks which don't conflict as protected
+                
+                while let Some(add2) = remaining_movements.iter().position(|&c2| stage.could_be_protected(c2, i))
+                {
+                    stage.protected_movements.insert(remaining_movements.remove(add2));
+                }
+            }
+        }
+    }
+    
+    //if any crosswalks are left over, make an all-walk stage.
+    
+    if !remaining_movements.is_empty()
+    {
+        let stage = Stage::new();
+        current_stage.protected_movements.extend(remaining_movements.drain(..));
+        ts.stages.push(stage);
+    }
+    
     ts
 }
 
