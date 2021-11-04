@@ -237,7 +237,9 @@ fn curvey_turn(src: &Lane, dst: &Lane) -> Result<PolyLine> {
     let pt1 = src.last_pt();
     let pt2 = dst.first_pt();
     
-    let (control_pt1, control_pt2) = if src_line.angle().approx_parallel(dst_line.angle(), 5.0)
+    let intersection = src_line.infinite().intersection(&dst_line.infinite()).unwrap_or(pt1);
+    
+    let (control_pt1, control_pt2) = if src_line.angle().approx_parallel(dst_line.angle(), 5.0) || pt1.approx_eq(intersection, geom::EPSILON_DIST)
     {
         //give U-turns an arbitrary amount of curviness
         (
@@ -246,8 +248,8 @@ fn curvey_turn(src: &Lane, dst: &Lane) -> Result<PolyLine> {
         )
     } else {
         (
-            Line::must_new(pt1, src_line.infinite().intersection(&dst_line.infinite()).unwrap_or(pt2)).unbounded_percent_along(2.0 / 3.0),
-            Line::must_new(pt2, src_line.infinite().intersection(&dst_line.infinite()).unwrap_or(pt1)).unbounded_percent_along(2.0 / 3.0)
+            Line::must_new(pt1, intersection).unbounded_percent_along(2.0 / 3.0),
+            Line::must_new(pt2, intersection).unbounded_percent_along(2.0 / 3.0)
         )
     };
     
