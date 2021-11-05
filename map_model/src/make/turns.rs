@@ -241,6 +241,7 @@ fn curvey_turn(src: &Lane, dst: &Lane) -> Result<PolyLine> {
     
     let (control_pt1, control_pt2) = if src_line.angle().approx_parallel(dst_line.angle(), 5.0) 
         || pt1.approx_eq(intersection, geom::EPSILON_DIST) // zero length intersections
+        || src_line.contains_pt(intersection) || dst_line.contains_pt(intersection) // weirdly shaped intersections
     {
         // make u turns have their control points in a rectangle, and straight turns have 
         // their control points near the middle of the intersection
