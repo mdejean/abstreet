@@ -168,8 +168,8 @@ fn make_vehicle_turns(i: &Intersection, map: &Map) -> Vec<Turn> {
                 continue;
             }
 
-            let from_angle = src.last_line().angle();
-            let to_angle = dst.first_line().angle();
+            let from_angle = src.last_line().angle().opposite();
+            let to_angle = dst.first_line().angle().opposite();
             let mut turn_type = turn_type_from_angles(from_angle, to_angle);
             if turn_type == TurnType::UTurn {
                 // Lots of false positives when classifying these just based on angles. So also
