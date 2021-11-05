@@ -205,9 +205,9 @@ fn make_vehicle_turns(i: &Intersection, map: &Map) -> Vec<Turn> {
                 }
             }
 
-            let geom = if turn_type == TurnType::Straight {
+            let geom = /*if turn_type == TurnType::Straight {
                 PolyLine::must_new(vec![src.last_pt(), dst.first_pt()])
-            } else {
+            } else */{
                 curvey_turn(src, dst)
                     .unwrap_or_else(|_| PolyLine::must_new(vec![src.last_pt(), dst.first_pt()]))
             };
