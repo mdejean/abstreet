@@ -18,6 +18,7 @@ pub enum PathStep {
     /// Sidewalks only!
     ContraflowLane(LaneID),
     Turn(TurnID),
+    ContraflowTurn(TurnID),
 }
 
 impl PathStep {
@@ -26,6 +27,7 @@ impl PathStep {
             PathStep::Lane(id) => Traversable::Lane(*id),
             PathStep::ContraflowLane(id) => Traversable::Lane(*id),
             PathStep::Turn(id) => Traversable::Turn(*id),
+            PathStep::ContraflowTurn(id) => Traversable::Turn(*id),
         }
     }
 
@@ -80,6 +82,15 @@ impl PathStep {
                     pts.maybe_exact_slice(start, pts.length())
                 }
             }
+            PathStep::ContraflowTurn(id) => {
+                let pts = &map.get_t(*id).geom;
+                let reversed_start = pts.length() - start;
+                if let Some(d) = dist_ahead {
+                    pts.maybe_exact_slice(reversed_start, reversed_start + d)
+                } else {
+                    pts.maybe_exact_slice(reversed_start, pts.length())
+                }
+            }
         }
     }
 
@@ -120,7 +131,7 @@ impl PathStep {
                 constraints,
                 map,
             ),
-            PathStep::Turn(t) => (
+            PathStep::Turn(t) | PathStep::ContraflowTurn(t) => (
                 Traversable::max_speed_along_movement(
                     t.to_movement(map),
                     max_speed_on_flat_ground,
@@ -210,7 +221,7 @@ impl Path {
                     lane.length()
                 }
             }
-            PathStep::Turn(t) => map.get_t(*t).geom.length(),
+            PathStep::Turn(t) | PathStep::ContraflowTurn(t) => map.get_t(*t).geom.length(),
         }
     }
 
@@ -495,7 +506,7 @@ impl Path {
                         map.get_i(lane.src_i).elevation,
                     )
                 }
-                PathStep::Turn(_) => {
+                PathStep::Turn(_) | PathStep::ContraflowTurn(_) => {
                     continue;
                 }
             };
@@ -675,11 +686,13 @@ fn validate_continuity(map: &Map, steps: &[PathStep]) {
             PathStep::Lane(id) => map.get_l(id).last_pt(),
             PathStep::ContraflowLane(id) => map.get_l(id).first_pt(),
             PathStep::Turn(id) => map.get_t(id).geom.last_pt(),
+            PathStep::ContraflowTurn(id) => map.get_t(id).geom.first_pt(),
         };
         let to = match pair[1] {
             PathStep::Lane(id) => map.get_l(id).first_pt(),
             PathStep::ContraflowLane(id) => map.get_l(id).last_pt(),
             PathStep::Turn(id) => map.get_t(id).geom.first_pt(),
+            PathStep::ContraflowTurn(id) => map.get_t(id).geom.first_pt(),
         };
         let len = from.dist_to(to);
         if len > EPSILON_DIST {
@@ -698,7 +711,7 @@ fn validate_continuity(map: &Map, steps: &[PathStep]) {
                         map.get_l(*l).dst_i,
                         map.get_l(*l).src_i
                     ),
-                    PathStep::Turn(_) => println!("  {:?}", s),
+                    PathStep::Turn(_) | PathStep::ContraflowTurn(_) => println!("  {:?}", s),
                 }
             }
             panic!(

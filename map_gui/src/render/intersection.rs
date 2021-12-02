@@ -596,15 +596,12 @@ fn make_unmarked_crossing(batch: &mut GeomBatch, turn: &Turn, map: &Map, cs: &Co
 // The geometry of crosswalks will first cross part of a sidewalk corner, then actually enter the
 // road. Extract the piece that's in the road.
 fn crosswalk_line(turn: &Turn) -> Option<Line> {
-    let pts = turn.geom.points();
-    if pts.len() < 3 {
-        warn!(
-            "Not rendering crosswalk for {}; its geometry was squished earlier",
-            turn.id
-        );
-        return None;
+    if let Ok((pt1, _)) = turn.geom.dist_along(SIDEWALK_THICKNESS) {
+        if let Ok((pt2, _)) = turn.geom.dist_along(turn.geom.length() - SIDEWALK_THICKNESS) {
+            return Line::new(pt1, pt2);
+        }
     }
-    Line::new(pts[1], pts[2])
+    None
 }
 
 // TODO copied from DrawLane

@@ -628,6 +628,7 @@ impl Pedestrian {
                 PathStep::Lane(l) => map.get_l(l).length(),
                 PathStep::ContraflowLane(_) => Distance::ZERO,
                 PathStep::Turn(t) => map.get_t(t).geom.length(),
+                PathStep::ContraflowTurn(_) => Distance::ZERO,
             }
         };
         let dist_int = DistanceInterval::new_walking(start_dist, end_dist);
@@ -822,6 +823,7 @@ impl Pedestrian {
             PathStep::Lane(_) => Distance::ZERO,
             PathStep::ContraflowLane(l) => map.get_l(l).length(),
             PathStep::Turn(_) => Distance::ZERO,
+            PathStep::ContraflowTurn(t) => map.get_t(t).geom.length(),
         };
         self.state = self.crossing_state(start_dist, now, map);
         peds_per_traversable.insert(self.path.current_step().as_traversable(), self.id);

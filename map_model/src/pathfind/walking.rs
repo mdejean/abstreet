@@ -299,21 +299,25 @@ fn make_input_graph(
             let src = map.get_l(t.id.src);
             let dst = map.get_l(t.id.dst);
             let from =
-                WalkingNode::SidewalkEndpoint(src.get_directed_parent(), src.dst_i == t.id.parent);
+                nodes.get(WalkingNode::SidewalkEndpoint(src.get_directed_parent(), src.dst_i == t.id.parent));
             let to =
-                WalkingNode::SidewalkEndpoint(dst.get_directed_parent(), dst.dst_i == t.id.parent);
-            let mut cost = t.geom.length()
-                / PathStep::Turn(t.id).max_speed_along(max_speed, PathConstraints::Pedestrian, map);
-            if t.turn_type == TurnType::UnmarkedCrossing {
-                // TODO Add to RoutingParams
-                cost = 3.0 * cost;
+                nodes.get(WalkingNode::SidewalkEndpoint(dst.get_directed_parent(), dst.dst_i == t.id.parent));
+            for (step, pair) in [
+                (PathStep::Turn(t.id), (from, to)),
+                (PathStep::ContraflowTurn(t.id), (to, from)),
+            ] {
+                let mut cost = t.geom.length()
+                    / step.max_speed_along(max_speed, PathConstraints::Pedestrian, map);
+                if t.turn_type == TurnType::UnmarkedCrossing {
+                    // TODO Add to RoutingParams
+                    cost = 3.0 * cost;
+                }
+                input_graph.add_edge(
+                    pair.0,
+                    pair.1,
+                    round(cost + zone_cost(t.id.to_movement(map), PathConstraints::Pedestrian, map)),
+                );
             }
-
-            input_graph.add_edge(
-                nodes.get(from),
-                nodes.get(to),
-                round(cost + zone_cost(t.id.to_movement(map), PathConstraints::Pedestrian, map)),
-            );
         }
     }
 
