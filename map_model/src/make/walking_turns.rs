@@ -1,6 +1,3 @@
-
-
-
 use geom::{Distance, Line, PolyLine, Pt2D, Ring};
 
 use crate::{
@@ -209,29 +206,32 @@ fn make_crosswalks(
     l2: &Lane,
     driving_side: DrivingSide,
 ) -> Option<Vec<Turn>> {
-    let l1_pt = l1.endpoint(i.id);
-    let l2_pt = l2.endpoint(i.id);
-    // This is one of those uncomfortably "trial-and-error" kind of things.
-    let mut direction = if (l1.dst_i == i.id) == (l2.dst_i == i.id) {
-        -1.0
-    } else {
-        1.0
-    };
-    if driving_side == DrivingSide::Left {
-        direction *= -1.0;
-    }
+    let l1_line = l1.end_line(i.id);
+    let l2_line = l2.end_line(i.id);
 
-    // Jut out a bit into the intersection, cross over, then jut back in. Assumes sidewalks are the
-    // same width.
-    let line = Line::new(l1_pt, l2_pt)?.shift_either_direction(
-        direction
-            * if i.is_degenerate() {
-                Distance::const_meters(2.5)
-            } else {
-                l1.width / 2.0
-            },
-    );
-    let geom_fwds = PolyLine::deduping_new(vec![l1_pt, line.pt1(), line.pt2(), l2_pt]).ok()?;
+    // Jut out a bit into the intersection, cross over, then jut back in.
+    // Put degenerate intersection crosswalks in the middle (DEGENERATE_HALF_LENGTH).
+    let geom_fwds = PolyLine::deduping_new(vec![
+        l1_line.pt2(),
+        l1_line.unbounded_dist_along(
+            l1_line.length()
+                + if i.is_degenerate() {
+                    Distance::const_meters(2.5)
+                } else {
+                    l1.width / 2.0
+                },
+        ),
+        l2_line.unbounded_dist_along(
+            l2_line.length()
+                + if i.is_degenerate() {
+                    Distance::const_meters(2.5)
+                } else {
+                    l2.width / 2.0
+                },
+        ),
+        l2_line.pt2(),
+    ])
+    .ok()?;
 
     Some(vec![Turn {
         id: turn_id(i.id, l1.id, l2.id),
@@ -251,8 +251,8 @@ fn make_shared_sidewalk_corner(
 
     // Find all of the points on the intersection polygon between the two sidewalks. Assumes
     // sidewalks are the same length.
-    let corner1 = if l1.src_i == i.id { l1.first_line().reversed() } else { l1.last_line() } .shift_right(l1.width / 2.0).pt2();
-    let corner2 = if l2.src_i == i.id { l2.first_line().reversed() } else { l2.last_line() } .shift_right(l2.width / 2.0).pt2();
+    let corner1 = l1.end_line(i.id).shift_right(l1.width / 2.0).pt2();
+    let corner2 = l2.end_line(i.id).shift_right(l2.width / 2.0).pt2();
 
     // TODO Something like this will be MUCH simpler and avoid going around the long way sometimes.
     if false {
@@ -263,8 +263,8 @@ fn make_shared_sidewalk_corner(
 
     // The order of the points here seems backwards, but it's because we scan from corner2
     // to corner1 below.
-    let last_pt = if l2.src_i == i.id { l2.first_pt() } else { l2.last_pt() };
-    let mut pts_between = vec![last_pt];
+
+    let mut pts_between = vec![l2.endpoint(i.id)];
     // Intersection polygons are constructed in clockwise order, so do corner2 to corner1.
     let mut i_pts = i.polygon.points().clone();
     if driving_side == DrivingSide::Left {
@@ -300,7 +300,7 @@ fn make_shared_sidewalk_corner(
             }
         }
     }
-    pts_between.push(if l1.src_i == i.id { l1.first_pt() } else { l1.last_pt() });
+    pts_between.push(l1.endpoint(i.id));
     pts_between.reverse();
     // Pretty big smoothing; I'm observing funky backtracking about 0.5m long.
     let mut final_pts = Pt2D::approx_dedupe(pts_between.clone(), Distance::meters(1.0));
@@ -314,9 +314,9 @@ fn make_shared_sidewalk_corner(
     }
     // The last point might be removed as a duplicate, but we want the start/end to exactly match
     // up at least.
-    if *final_pts.last().unwrap() != last_pt {
+    if *final_pts.last().unwrap() != l2.endpoint(i.id) {
         final_pts.pop();
-        final_pts.push(last_pt);
+        final_pts.push(l2.endpoint(i.id));
     }
     if abstutil::contains_duplicates(
         &final_pts
