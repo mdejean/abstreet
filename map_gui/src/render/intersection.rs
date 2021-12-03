@@ -55,7 +55,9 @@ impl DrawIntersection {
         }
 
         for turn in &i.turns {
-            make_crosswalk(&mut default_geom, turn, map, app.cs());
+            if turn.turn_type.pedestrian_crossing() {
+                make_crosswalk(&mut default_geom, turn, map, app.cs());
+            }
         }
 
         if i.is_private(map) {
