@@ -91,8 +91,6 @@ pub fn make_walking_turns(map: &Map, i: &Intersection) -> Vec<Turn> {
         let l2 = l.unwrap();
 
         if adj && l1.id.road != l2.id.road {
-            // Because of the order we go, have to swap l1 and l2 here. l1 is the outgoing, l2 the
-            // incoming.
             let geom = make_shared_sidewalk_corner(driving_side, i, l1, l2);
             result.push(Turn {
                 id: turn_id(i.id, l1.id, l2.id),
@@ -253,8 +251,8 @@ fn make_shared_sidewalk_corner(
 
     // Find all of the points on the intersection polygon between the two sidewalks. Assumes
     // sidewalks are the same length.
-    let corner1 = l1.last_line().shift_right(l1.width / 2.0).pt2();
-    let corner2 = l2.first_line().shift_right(l2.width / 2.0).pt1();
+    let corner1 = if l1.src_i == i.id { l1.first_line().reversed() } else { l1.last_line() } .shift_right(l1.width / 2.0).pt2();
+    let corner2 = if l2.src_i == i.id { l2.first_line().reversed() } else { l2.last_line() } .shift_right(l2.width / 2.0).pt2();
 
     // TODO Something like this will be MUCH simpler and avoid going around the long way sometimes.
     if false {
@@ -265,7 +263,8 @@ fn make_shared_sidewalk_corner(
 
     // The order of the points here seems backwards, but it's because we scan from corner2
     // to corner1 below.
-    let mut pts_between = vec![l2.first_pt()];
+    let last_pt = if l2.src_i == i.id { l2.first_pt() } else { l2.last_pt() };
+    let mut pts_between = vec![last_pt];
     // Intersection polygons are constructed in clockwise order, so do corner2 to corner1.
     let mut i_pts = i.polygon.points().clone();
     if driving_side == DrivingSide::Left {
@@ -301,7 +300,7 @@ fn make_shared_sidewalk_corner(
             }
         }
     }
-    pts_between.push(l1.last_pt());
+    pts_between.push(if l1.src_i == i.id { l1.first_pt() } else { l1.last_pt() });
     pts_between.reverse();
     // Pretty big smoothing; I'm observing funky backtracking about 0.5m long.
     let mut final_pts = Pt2D::approx_dedupe(pts_between.clone(), Distance::meters(1.0));
@@ -315,9 +314,9 @@ fn make_shared_sidewalk_corner(
     }
     // The last point might be removed as a duplicate, but we want the start/end to exactly match
     // up at least.
-    if *final_pts.last().unwrap() != l2.first_pt() {
+    if *final_pts.last().unwrap() != last_pt {
         final_pts.pop();
-        final_pts.push(l2.first_pt());
+        final_pts.push(last_pt);
     }
     if abstutil::contains_duplicates(
         &final_pts
@@ -348,13 +347,4 @@ fn make_shared_sidewalk_corner(
 
 fn turn_id(parent: IntersectionID, src: LaneID, dst: LaneID) -> TurnID {
     TurnID { parent, src, dst }
-}
-
-fn get_sidewalk(map: &Map, children: Vec<(LaneID, LaneType)>) -> Option<&Lane> {
-    for (id, lt) in children {
-        if lt.is_walkable() {
-            return Some(map.get_l(id));
-        }
-    }
-    None
 }
