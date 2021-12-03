@@ -692,7 +692,7 @@ fn validate_continuity(map: &Map, steps: &[PathStep]) {
             PathStep::Lane(id) => map.get_l(id).first_pt(),
             PathStep::ContraflowLane(id) => map.get_l(id).last_pt(),
             PathStep::Turn(id) => map.get_t(id).geom.first_pt(),
-            PathStep::ContraflowTurn(id) => map.get_t(id).geom.first_pt(),
+            PathStep::ContraflowTurn(id) => map.get_t(id).geom.last_pt(),
         };
         let len = from.dist_to(to);
         if len > EPSILON_DIST {

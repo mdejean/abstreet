@@ -377,14 +377,12 @@ fn make_crosswalks(
     let line = Line::new(l1_pt, l2_pt)?.shift_either_direction(direction * l1.width / 2.0);
     let geom_fwds = PolyLine::deduping_new(vec![l1_pt, line.pt1(), line.pt2(), l2_pt]).ok()?;
 
-    Some(vec![
-        Turn {
-            id: turn_id(i, l1.id, l2.id),
-            turn_type: TurnType::Crosswalk,
-            other_crosswalk_ids: BTreeSet::new(),
-            geom: geom_fwds,
-        },
-    ])
+    Some(vec![Turn {
+        id: turn_id(i, l1.id, l2.id),
+        turn_type: TurnType::Crosswalk,
+        other_crosswalk_ids: BTreeSet::new(),
+        geom: geom_fwds,
+    }])
 }
 
 // Only one crosswalk for degenerate intersections, right in the middle.

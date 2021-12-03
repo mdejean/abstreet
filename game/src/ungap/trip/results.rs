@@ -323,7 +323,9 @@ impl RouteDetails {
                                     // TODO Interpolate
                                     map.get_i(map.get_l(l).src_i).elevation
                                 }
-                                PathStep::Turn(t) | PathStep::ContraflowTurn(t) => map.get_i(t.parent).elevation,
+                                PathStep::Turn(t) | PathStep::ContraflowTurn(t) => {
+                                    map.get_i(t.parent).elevation
+                                }
                             };
                             panel
                                 .find_mut::<LinePlot<Distance, Distance>>("elevation")
