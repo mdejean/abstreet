@@ -219,7 +219,6 @@ fn make_vehicle_turns(i: &Intersection, map: &Map) -> Vec<Turn> {
                     dst: dst.id,
                 },
                 turn_type,
-                other_crosswalk_ids: BTreeSet::new(),
                 geom,
             });
         }

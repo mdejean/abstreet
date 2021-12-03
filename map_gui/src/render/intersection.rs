@@ -55,12 +55,7 @@ impl DrawIntersection {
         }
 
         for turn in &i.turns {
-            // Avoid double-rendering
-            if turn.turn_type.pedestrian_crossing()
-                && !turn.other_crosswalk_ids.iter().any(|id| *id < turn.id)
-            {
-                make_crosswalk(&mut default_geom, turn, map, app.cs());
-            }
+            make_crosswalk(&mut default_geom, turn, map, app.cs());
         }
 
         if i.is_private(map) {
