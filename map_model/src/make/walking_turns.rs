@@ -1,10 +1,10 @@
-use std::collections::BTreeSet;
 
-use abstutil::wraparound_get;
+
+
 use geom::{Distance, Line, PolyLine, Pt2D, Ring};
 
 use crate::{
-    Direction, DrivingSide, Intersection, IntersectionID, Lane, LaneID, LaneType, Map, Road, Turn,
+    Direction, DrivingSide, Intersection, IntersectionID, Lane, LaneID, LaneType, Map, Turn,
     TurnID, TurnType,
 };
 
@@ -97,7 +97,7 @@ pub fn make_walking_turns(map: &Map, i: &Intersection) -> Vec<Turn> {
             result.push(Turn {
                 id: turn_id(i.id, l1.id, l2.id),
                 turn_type: TurnType::SharedSidewalkCorner,
-                geom: geom,
+                geom,
             });
 
             from = Some(l2);
