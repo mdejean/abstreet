@@ -214,7 +214,8 @@ impl WalkingSimState {
                         SidewalkPOI::DeferredParkingSpot => unreachable!(),
                     }
                 } else {
-                    if let PathStep::Turn(t) = ped.path.current_step() {
+                    if let PathStep::Turn(t) | PathStep::ContraflowTurn(t) = ped.path.current_step()
+                    {
                         ctx.intersections.turn_finished(
                             now,
                             AgentID::Pedestrian(ped.id),
@@ -345,11 +346,13 @@ impl WalkingSimState {
             .remove(ped.path.current_step().as_traversable(), id);
         ctx.scheduler.cancel(Command::UpdatePed(id));
 
-        if let PathStep::Turn(t) = ped.path.current_step() {
+        if let PathStep::Turn(t) | PathStep::ContraflowTurn(t) = ped.path.current_step() {
             ctx.intersections
                 .agent_deleted_mid_turn(AgentID::Pedestrian(id), t);
         }
-        if let Some(PathStep::Turn(t)) = ped.path.maybe_next_step() {
+        if let Some(PathStep::Turn(t)) | Some(PathStep::ContraflowTurn(t)) =
+            ped.path.maybe_next_step()
+        {
             ctx.intersections.cancel_request(AgentID::Pedestrian(id), t);
         }
     }
@@ -799,7 +802,7 @@ impl Pedestrian {
         events: &mut Vec<Event>,
         scheduler: &mut Scheduler,
     ) -> bool {
-        if let PathStep::Turn(t) = self.path.next_step() {
+        if let PathStep::Turn(t) | PathStep::ContraflowTurn(t) = self.path.next_step() {
             if !intersections.maybe_start_turn(
                 AgentID::Pedestrian(self.id),
                 t,

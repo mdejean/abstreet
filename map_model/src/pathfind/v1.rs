@@ -748,7 +748,7 @@ fn validate_zones(map: &Map, steps: &[PathStep], req: &PathRequest) {
     let z2 = map.get_parent(req.end.lane()).get_zone(map);
 
     for step in steps {
-        if let PathStep::Turn(t) = step {
+        if let PathStep::Turn(t) | PathStep::ContraflowTurn(t) = step {
             if map
                 .get_parent(t.src)
                 .access_restrictions
