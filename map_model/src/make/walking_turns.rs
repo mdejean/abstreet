@@ -250,19 +250,29 @@ fn make_shared_sidewalk_corner(
     let (start_pt, end_pt) = (l1.endpoint(i.id), l2.endpoint(i.id));
 
     let pl = PolyLine::unchecked_new(i.polygon.clone().into_points());
-    let (p1, p2) = (pl.nearest_pt(start_pt), pl.nearest_pt(end_pt));
 
-    // this panics in get_shorter_slice_btwn instead of returning none
-    if p1 == p2 {
-        return PolyLine::must_new(vec![start_pt, end_pt]);
-    }
+    // Find all of the points on the intersection polygon between the two sidewalks. Assumes
+    // sidewalks are the same width.
+    let corner1 = l1.end_line(i.id).shift_right(l1.width / 2.0).pt2();
+    let corner2 = l2.end_line(i.id).shift_right(l2.width / 2.0).pt2();
+    let (p1, p2) = (pl.nearest_pt(corner1), pl.nearest_pt(corner2));
 
-    return i
+    if let Some(pl) = i
         .polygon
         .clone()
         .into_ring()
-        .get_shorter_slice_btwn(p1, p2)
-        .unwrap_or(PolyLine::must_new(vec![start_pt, end_pt]));
+        .get_shorter_slice_between(p1, p2)
+        .and_then(|pl| pl.shift_left(l1.width.min(l2.width) / 2.0).ok())
+    {
+        return pl;
+    } else {
+        warn!(
+            "SharedSidewalkCorner between {} and {} has weird duplicate geometry, so just \
+                doing straight line",
+            l1.id, l2.id
+        );
+        return PolyLine::must_new(vec![start_pt, end_pt]);
+    }
 }
 
 fn turn_id(parent: IntersectionID, src: LaneID, dst: LaneID) -> TurnID {
