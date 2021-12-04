@@ -253,8 +253,14 @@ fn make_shared_sidewalk_corner(
 
     // Find all of the points on the intersection polygon between the two sidewalks. Assumes
     // sidewalks are the same width.
-    let corner1 = l1.end_line(i.id).shift_right(l1.width / 2.0).pt2();
-    let corner2 = l2.end_line(i.id).shift_right(l2.width / 2.0).pt2();
+    let corner1 = l1
+        .end_line(i.id)
+        .shift_either_direction(if l1.dst_i == i.id { 1.0 } else { -1.0 } * l1.width / 2.0)
+        .pt2();
+    let corner2 = l2
+        .end_line(i.id)
+        .shift_either_direction(if l2.dst_i == i.id { 1.0 } else { -1.0 } * l2.width / 2.0)
+        .pt2();
     let (p1, p2) = (pl.nearest_pt(corner1), pl.nearest_pt(corner2));
 
     if let Some(pl) = i
@@ -262,7 +268,7 @@ fn make_shared_sidewalk_corner(
         .clone()
         .into_ring()
         .get_shorter_slice_between(p1, p2)
-        .and_then(|pl| pl.shift_left(l1.width.min(l2.width) / 2.0).ok())
+        .and_then(|pl| pl.shift_right(l1.width.min(l2.width) / 2.0).ok())
     {
         return pl;
     } else {
