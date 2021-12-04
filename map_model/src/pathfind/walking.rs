@@ -445,16 +445,14 @@ fn walking_path_to_steps(path: Vec<WalkingNode>, map: &Map) -> Vec<PathStepV2> {
                 r1.src_i(map)
             };
             // Could assert the intersection matches (r2, r2_endpt).
-            if map
-                .get_turn_between(r1.must_get_sidewalk(map), r2.must_get_sidewalk(map), i)
-                .is_some()
+            if let Some(t) =
+                map.get_turn_between(r1.must_get_sidewalk(map), r2.must_get_sidewalk(map), i)
             {
-                steps.push(PathStepV2::Movement(MovementID {
-                    from: r1,
-                    to: r2,
-                    parent: i,
-                    crosswalk: true,
-                }));
+                steps.push(PathStepV2::Movement(t.id.to_movement(map)));
+            } else if let Some(t) =
+                map.get_turn_between(r2.must_get_sidewalk(map), r1.must_get_sidewalk(map), i)
+            {
+                steps.push(PathStepV2::ContraflowMovement(t.id.to_movement(map)));
             } else {
                 println!("walking_path_to_steps has a weird path:");
                 for s in &path {
