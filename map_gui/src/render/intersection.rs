@@ -262,10 +262,6 @@ pub fn calculate_corners(i: &Intersection, map: &Map) -> Vec<Polygon> {
 
     for turn in &i.turns {
         if turn.turn_type == TurnType::SharedSidewalkCorner {
-            // Avoid double-rendering
-            if map.get_l(turn.id.src).dst_i != i.id {
-                continue;
-            }
             let l1 = map.get_l(turn.id.src);
             let l2 = map.get_l(turn.id.dst);
 
