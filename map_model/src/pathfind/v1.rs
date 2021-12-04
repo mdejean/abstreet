@@ -431,6 +431,9 @@ impl Path {
                     PathStep::ContraflowLane(l) => {
                         map.get_l(l).lane_center_pts.reversed().length() - orig_end_dist
                     }
+                    PathStep::ContraflowTurn(t) => {
+                        map.get_t(t).geom.reversed().length() - orig_end_dist
+                    }
                     _ => orig_end_dist,
                 })
             } else {
@@ -441,6 +444,7 @@ impl Path {
                 // TODO Length of a PolyLine can slightly change when points are reversed! That
                 // seems bad.
                 PathStep::ContraflowLane(l) => map.get_l(l).lane_center_pts.reversed().length(),
+                PathStep::ContraflowTurn(t) => map.get_t(t).geom.length(),
                 _ => Distance::ZERO,
             };
             if let Ok(new_pts) = self.steps[i].exact_slice(map, start_dist_this_step, dist_ahead) {
