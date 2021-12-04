@@ -1,4 +1,4 @@
-use std::fmt;
+use std::{fmt, ops};
 
 use ordered_float::NotNan;
 use serde::{Deserialize, Serialize};
@@ -172,6 +172,38 @@ impl Pt2D {
 impl fmt::Display for Pt2D {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "Pt2D({0}, {1})", self.x(), self.y())
+    }
+}
+
+impl ops::Add for Pt2D {
+    type Output = Pt2D;
+
+    fn add(self, other: Pt2D) -> Pt2D {
+        Pt2D::new(self.x() + other.x(), self.y() + other.y())
+    }
+}
+
+impl ops::Sub for Pt2D {
+    type Output = Pt2D;
+
+    fn sub(self, other: Pt2D) -> Pt2D {
+        Pt2D::new(self.x() - other.x(), self.y() - other.y())
+    }
+}
+
+impl ops::Mul<f64> for Pt2D {
+    type Output = Pt2D;
+
+    fn mul(self, scalar: f64) -> Pt2D {
+        Pt2D::new(self.x() * scalar, self.y() * scalar)
+    }
+}
+
+impl ops::Div<f64> for Pt2D {
+    type Output = Pt2D;
+
+    fn div(self, scalar: f64) -> Pt2D {
+        Pt2D::new(self.x() / scalar, self.y() / scalar)
     }
 }
 

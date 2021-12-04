@@ -990,6 +990,17 @@ impl PolyLine {
 
         PolyLine::new(output).unwrap()
     }
+
+    pub fn nearest_pt(&self, pt: Pt2D) -> Pt2D {
+        self.lines().fold(self.pts[0], |a, l| {
+            let closest = l.nearest_pt(pt);
+            if closest.fast_dist(pt) < a.fast_dist(pt) {
+                closest
+            } else {
+                a
+            }
+        })
+    }
 }
 
 impl fmt::Display for PolyLine {

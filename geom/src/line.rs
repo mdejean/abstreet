@@ -211,6 +211,26 @@ impl Line {
         let dist = self.dist_along_of_point(pt)?;
         Some(dist / self.length())
     }
+
+    pub fn nearest_pt(&self, pt: Pt2D) -> Pt2D {
+        let p = self.infinite().nearest_pt(pt);
+        let d1 = p.raw_dist_to(self.pt1());
+        let d2 = p.raw_dist_to(self.pt2());
+        let length = self.pt1().raw_dist_to(self.pt2());
+        if d1 > d2 {
+            if d1 > length {
+                self.pt2()
+            } else {
+                p
+            }
+        } else {
+            if d2 > length {
+                self.pt1()
+            } else {
+                p
+            }
+        }
+    }
 }
 
 impl fmt::Display for Line {
@@ -256,6 +276,15 @@ impl InfiniteLine {
             //let u = cross(q_minus_p, Pt2D::new(r.x() / r_cross_s, r.y() / r_cross_s));
             Some(Pt2D::new(p.x() + t * r.0, p.y() + t * r.1))
         }
+    }
+
+    pub fn nearest_pt(&self, pt: Pt2D) -> Pt2D {
+        fn dot(a: Pt2D, b: Pt2D) -> f64 {
+            a.x() * b.x() + a.y() * b.y()
+        }
+        let p = pt - self.0;
+        let v = self.1 - self.0;
+        return self.0 + v * dot(p, v) / dot(v, v);
     }
 }
 
