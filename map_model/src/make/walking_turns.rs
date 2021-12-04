@@ -247,102 +247,22 @@ fn make_shared_sidewalk_corner(
     l1: &Lane,
     l2: &Lane,
 ) -> PolyLine {
-    let baseline = PolyLine::must_new(vec![l1.last_pt(), l2.first_pt()]);
+    let (start_pt, end_pt) = (l1.endpoint(i.id), l2.endpoint(i.id));
 
-    // Find all of the points on the intersection polygon between the two sidewalks. Assumes
-    // sidewalks are the same length.
-    let corner1 = l1.end_line(i.id).shift_right(l1.width / 2.0).pt2();
-    let corner2 = l2.end_line(i.id).shift_right(l2.width / 2.0).pt2();
+    let pl = PolyLine::unchecked_new(i.polygon.clone().into_points());
+    let (p1, p2) = (pl.nearest_pt(start_pt), pl.nearest_pt(end_pt));
 
-    // TODO Something like this will be MUCH simpler and avoid going around the long way sometimes.
-    if false {
-        return Ring::must_new(i.polygon.points().clone())
-            .get_shorter_slice_btwn(corner1, corner2)
-            .unwrap();
+    // this panics in get_shorter_slice_btwn instead of returning none
+    if p1 == p2 {
+        return PolyLine::must_new(vec![start_pt, end_pt]);
     }
 
-    // The order of the points here seems backwards, but it's because we scan from corner2
-    // to corner1 below.
-
-    let mut pts_between = vec![l2.endpoint(i.id)];
-    // Intersection polygons are constructed in clockwise order, so do corner2 to corner1.
-    let mut i_pts = i.polygon.points().clone();
-    if driving_side == DrivingSide::Left {
-        i_pts.reverse();
-    }
-    if let Some(pts) = Pt2D::find_pts_between(&i_pts, corner2, corner1, Distance::meters(0.5)) {
-        let mut deduped = pts;
-        deduped.dedup();
-        if deduped.len() >= 2 {
-            if abstutil::contains_duplicates(
-                &deduped
-                    .iter()
-                    .map(|pt| pt.to_hashable())
-                    .collect::<Vec<_>>(),
-            ) {
-                warn!(
-                    "SharedSidewalkCorner between {} and {} has weird duplicate geometry, so just \
-                     doing straight line",
-                    l1.id, l2.id
-                );
-                return baseline;
-            }
-
-            if let Ok(pl) = PolyLine::must_new(deduped).shift_right(l1.width.min(l2.width) / 2.0) {
-                pts_between.extend(pl.points());
-            } else {
-                warn!(
-                    "SharedSidewalkCorner between {} and {} has weird collapsing geometry, so \
-                     just doing straight line",
-                    l1.id, l2.id
-                );
-                return baseline;
-            }
-        }
-    }
-    pts_between.push(l1.endpoint(i.id));
-    pts_between.reverse();
-    // Pretty big smoothing; I'm observing funky backtracking about 0.5m long.
-    let mut final_pts = Pt2D::approx_dedupe(pts_between.clone(), Distance::meters(1.0));
-    if final_pts.len() < 2 {
-        warn!(
-            "SharedSidewalkCorner between {} and {} couldn't do final smoothing",
-            l1.id, l2.id
-        );
-        final_pts = pts_between;
-        final_pts.dedup()
-    }
-    // The last point might be removed as a duplicate, but we want the start/end to exactly match
-    // up at least.
-    if *final_pts.last().unwrap() != l2.endpoint(i.id) {
-        final_pts.pop();
-        final_pts.push(l2.endpoint(i.id));
-    }
-    if abstutil::contains_duplicates(
-        &final_pts
-            .iter()
-            .map(|pt| pt.to_hashable())
-            .collect::<Vec<_>>(),
-    ) {
-        warn!(
-            "SharedSidewalkCorner between {} and {} has weird duplicate geometry, so just doing \
-             straight line",
-            l1.id, l2.id
-        );
-        return baseline;
-    }
-    let result = PolyLine::must_new(final_pts);
-    if result.length() > 10.0 * baseline.length() {
-        warn!(
-            "SharedSidewalkCorner between {} and {} explodes to {} long, so just doing straight \
-             line",
-            l1.id,
-            l2.id,
-            result.length()
-        );
-        return baseline;
-    }
-    result
+    return i
+        .polygon
+        .clone()
+        .into_ring()
+        .get_shorter_slice_btwn(p1, p2)
+        .unwrap_or(PolyLine::must_new(vec![start_pt, end_pt]));
 }
 
 fn turn_id(parent: IntersectionID, src: LaneID, dst: LaneID) -> TurnID {
