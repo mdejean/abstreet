@@ -249,36 +249,24 @@ fn make_shared_sidewalk_corner(
 ) -> PolyLine {
     let (start_pt, end_pt) = (l1.endpoint(i.id), l2.endpoint(i.id));
 
-    let pl = PolyLine::unchecked_new(i.polygon.clone().into_points());
+    if let Some(offset_p) = i.polygon.clone().offset(-l1.width.min(l2.width) / 2.0, 1.0) {
+        if let Ok(pl) = PolyLine::new(offset_p.into_points()) {
+            // Find all of the points on the intersection polygon between the two sidewalks.
+            let (p1, p2) = (pl.nearest_pt(start_pt), pl.nearest_pt(end_pt));
 
-    // Find all of the points on the intersection polygon between the two sidewalks. Assumes
-    // sidewalks are the same width.
-    let corner1 = l1
-        .end_line(i.id)
-        .shift_either_direction(if l1.dst_i == i.id { 1.0 } else { -1.0 } * l1.width / 2.0)
-        .pt2();
-    let corner2 = l2
-        .end_line(i.id)
-        .shift_either_direction(if l2.dst_i == i.id { 1.0 } else { -1.0 } * l2.width / 2.0)
-        .pt2();
-    let (p1, p2) = (pl.nearest_pt(corner1), pl.nearest_pt(corner2));
-
-    if let Some(pl) = i
-        .polygon
-        .clone()
-        .into_ring()
-        .get_shorter_slice_between(p1, p2)
-        .and_then(|pl| pl.shift_right(l1.width.min(l2.width) / 2.0).ok())
-    {
-        return pl;
-    } else {
-        warn!(
-            "SharedSidewalkCorner between {} and {} has weird duplicate geometry, so just \
-                doing straight line",
-            l1.id, l2.id
-        );
-        return PolyLine::must_new(vec![start_pt, end_pt]);
+            if let Ok(r) = Ring::new(pl.into_points()) {
+                if let Some(pl) = r.get_shorter_slice_between(p1, p2) {
+                    return pl;
+                }
+            }
+        }
     }
+    warn!(
+        "SharedSidewalkCorner between {} and {} has weird duplicate geometry, so just \
+            doing straight line",
+        l1.id, l2.id
+    );
+    return PolyLine::must_new(vec![start_pt, end_pt]);
 }
 
 fn turn_id(parent: IntersectionID, src: LaneID, dst: LaneID) -> TurnID {

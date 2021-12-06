@@ -7,6 +7,7 @@ use geo::algorithm::convex_hull::ConvexHull;
 use geo::algorithm::intersects::Intersects;
 use geo::algorithm::simplifyvw::SimplifyVWPreserve;
 use geo_booleanop::boolean::BooleanOp;
+use offset_polygon::offset_polygon;
 use serde::{Deserialize, Serialize};
 
 use abstutil::Tags;
@@ -548,6 +549,17 @@ impl Polygon {
 
     pub fn simplify(&self, epsilon: f64) -> Polygon {
         to_geo(self.points()).simplifyvw_preserve(&epsilon).into()
+    }
+
+    pub fn offset(&self, d: Distance, rounding: f64) -> Option<Polygon> {
+        Some(Polygon::buggy_new(
+            offset_polygon(to_geo(self.points()).exterior(), d.inner_meters(), rounding)
+                .ok()?
+                .get(0)?
+                .points_iter()
+                .map(|p| Pt2D::from(p))
+                .collect(),
+        ))
     }
 }
 

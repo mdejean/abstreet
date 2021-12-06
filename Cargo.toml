@@ -46,3 +46,6 @@ polylabel = { git = "https://github.com/urschrei/polylabel-rs" }
 # Waiting on release of PR: https://github.com/georust/geo/pull/654
 geo = { git = "https://github.com/georust/geo" }
 geo-types = { git = "https://github.com/georust/geo" }
+
+# Depends on the wrong version of geo
+offset-polygon = { git = "https://github.com/mdejean/offset_polygon" }
